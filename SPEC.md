@@ -63,7 +63,7 @@ Emits:
 - `rpup()` — `eval "$(command rpup use …)"` for switch/reset; passes through
   list/doctor.
 - `_rpup_auto()` — **pure shell**, no fork: walk `$PWD` upward for `.ruby-version`,
-  compare to `$RPUP_AUTO_VERSION`; only on change call `rpup use`. Mirrors
+  compare to `$RPUP_CURRENT_VERSION`; only on change call `rpup use`. Mirrors
   `chruby_auto` so the per-command cost stays a couple of string ops.
 - zsh: append to `preexec_functions`; bash: `PROMPT_COMMAND`/`DEBUG` trap
   (match chruby's choice).
