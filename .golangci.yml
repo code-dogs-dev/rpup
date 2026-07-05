@@ -1,0 +1,36 @@
+version: "2"
+
+linters:
+  default: none
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - gosec
+    - misspell
+    - revive
+    - unconvert
+  settings:
+    errcheck:
+      # Writes to os.Stdout/os.Stderr can't fail in any actionable way for a
+      # CLI, and checking every diagnostic Fprint would only add noise.
+      exclude-functions:
+        - fmt.Fprint
+        - fmt.Fprintf
+        - fmt.Fprintln
+  exclusions:
+    rules:
+      # Tests deliberately launch subprocesses with variable args and create
+      # 0o755 fixtures; gosec's warnings there are noise, and an unchecked
+      # cleanup defer in a test is fine.
+      - path: _test\.go
+        linters:
+          - gosec
+          - errcheck
+
+formatters:
+  enable:
+    - gofmt
+    - goimports

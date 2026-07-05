@@ -1,0 +1,96 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+version: 2
+
+project_name: rpup
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  # Split darwin/linux into separate ids so the quill post-hook only runs on
+  # the darwin build — quill errors on non-Mach-O input, and a single combined
+  # build would run the hook against the linux ELF too.
+  - id: rpup-darwin
+    main: ./
+    binary: rpup
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ldflags: &ldflags
+      - -s -w
+      - -X main.version={{.Version}}
+    # Sign + notarize each darwin binary in place, right after it's built and
+    # before archiving, so the signed binary is what ends up in the tarball.
+    # quill (anchore/quill) signs and notarizes Mach-O binaries from the Linux
+    # release runner — no macOS/codesign needed. The post-hook form (not a
+    # binary_signs block) is deliberate: signs/binary_signs register a separate
+    # signature artifact GoReleaser then tries to upload, but quill signs in
+    # place and writes no such file, so the publish step would fail. quill reads
+    # QUILL_SIGN_* / QUILL_NOTARY_* from the process environment (the release
+    # workflow's job env, from repo secrets); snapshots run --ad-hoc + --dry-run
+    # and need none of them.
+    hooks:
+      post:
+        - cmd: quill sign-and-notarize "{{ .Path }}" --dry-run={{ .IsSnapshot }} --ad-hoc={{ .IsSnapshot }} -vv
+  - id: rpup-linux
+    main: ./
+    binary: rpup
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    ldflags: *ldflags
+
+archives:
+  - formats: [tar.gz]
+    name_template: "rpup_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - README.md
+
+checksum:
+  name_template: "checksums.txt"
+  algorithm: sha256
+
+changelog:
+  disable: true
+
+release:
+  header: |
+    A fork-free, drop-in replacement for chruby. See the
+    [README](https://github.com/code-dogs-dev/rpup/blob/main/README.md) for install
+    and usage.
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-snapshot"
+
+homebrew_casks:
+  - name: rpup
+    binaries: [rpup]
+    repository:
+      owner: code-dogs-dev
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    directory: Casks
+    homepage: "https://github.com/code-dogs-dev/rpup"
+    description: "Fork-free, drop-in replacement for chruby — switches Ruby without spawning ruby"
+    commit_author:
+      name: goreleaserbot
+      email: bot@goreleaser.com
+    commit_msg_template: "rpup: bump to {{ .Tag }}"
+    caveats: |
+      rpup switches Ruby by printing shell to eval. Wire up the auto-switch hook
+      by adding this to your ~/.zshrc (or ~/.bashrc):
+
+        eval "$(rpup hook zsh)"     # bash: rpup hook bash
+
+      Then `cd` into a project with a .ruby-version and rpup switches for you.
+      One-shot switching without the hook: eval "$(rpup use 3.4.5)".
