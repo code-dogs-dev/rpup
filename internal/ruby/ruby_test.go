@@ -9,9 +9,9 @@ import (
 
 func TestParseName(t *testing.T) {
 	cases := []struct {
-		name              string
-		engine, version   string
-		ok                bool
+		name            string
+		engine, version string
+		ok              bool
 	}{
 		{"ruby-4.0.5", "ruby", "4.0.5", true},
 		{"ruby-3.4.5", "ruby", "3.4.5", true},
@@ -190,8 +190,7 @@ func TestGemRootGlob(t *testing.T) {
 	}
 
 	env := NewEnv(map[string]string{"PATH": "/usr/bin"}, 501, "/home/x")
-	r, _ := NewRuby(filepath.Join(root)) // basename is a temp name, may not parse
-	r = Ruby{Root: root, Engine: "ruby", Version: "4.0.5"}
+	r := Ruby{Root: root, Engine: "ruby", Version: "4.0.5"}
 	set, _ := stmtMap(env.Use(r, ""))
 	if set["GEM_ROOT"] != gemsDir {
 		t.Errorf("GEM_ROOT = %q, want %q", set["GEM_ROOT"], gemsDir)
