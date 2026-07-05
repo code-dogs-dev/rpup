@@ -4,10 +4,10 @@
 
 # rpup
 
-**Switch Ruby without spawning one.** `rpup` is a fork-free, drop-in replacement
-for [chruby](https://github.com/postmodern/chruby): it switches your Ruby version
-by printing shell to `eval`, and never spawns a `ruby` process to do it — so every
-switch and every `cd` stays fast.
+**Switch Ruby without spawning one.** `rpup` is a fork-free pup — a drop-in
+replacement for [chruby](https://github.com/postmodern/chruby) that switches your
+Ruby version by printing shell to `eval`, and never spawns a `ruby` process to do
+it (that's the fork it's free of). So every switch and every `cd` stays fast.
 
 ```
 $ rpup ls                 # installed rubies (* = active)

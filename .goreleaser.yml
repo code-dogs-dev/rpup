@@ -81,7 +81,7 @@ homebrew_casks:
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
     directory: Casks
     homepage: "https://github.com/code-dogs-dev/rpup"
-    description: "Fork-free, drop-in replacement for chruby — switches Ruby without spawning ruby"
+    description: "A fork-free pup — drop-in chruby replacement that switches Ruby without spawning ruby"
     commit_author:
       name: goreleaserbot
       email: bot@goreleaser.com
