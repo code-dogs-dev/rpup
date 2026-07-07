@@ -83,16 +83,12 @@ func NewRuby(root string) (Ruby, bool) {
 	return Ruby{Root: root, Engine: engine, Version: version}, true
 }
 
-// SearchDirs returns chruby's ruby search roots, honouring $PREFIX and $HOME.
-func SearchDirs(prefix, home string) []string {
-	var dirs []string
-	if prefix != "" {
-		dirs = append(dirs, filepath.Join(prefix, "opt", "rubies"))
+// SearchDirs returns the ruby search roots: $HOME/.rubies.
+func SearchDirs(home string) []string {
+	if home == "" {
+		return nil
 	}
-	if home != "" {
-		dirs = append(dirs, filepath.Join(home, ".rubies"))
-	}
-	return dirs
+	return []string{filepath.Join(home, ".rubies")}
 }
 
 // Discover lists rubies found under the given search dirs, sorted by name.

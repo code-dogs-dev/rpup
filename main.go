@@ -48,7 +48,7 @@ func run(args []string, stdout, stderr *os.File) int {
 }
 
 func searchDirs() []string {
-	return ruby.SearchDirs(os.Getenv("PREFIX"), os.Getenv("HOME"))
+	return ruby.SearchDirs(os.Getenv("HOME"))
 }
 
 func cmdList(stdout *os.File) int {
