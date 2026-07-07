@@ -76,7 +76,7 @@ func TestInstall(t *testing.T) {
 	defer srv.Close()
 
 	rubies := t.TempDir()
-	path, err := install(srv.URL, "4.0.5", rubies, srv.Client())
+	path, err := install(srv.URL, "4.0.5", rubies, false, srv.Client())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,12 +101,50 @@ func TestInstall(t *testing.T) {
 	}
 }
 
+func rubyTarball(t *testing.T) []byte {
+	t.Helper()
+	return makeTarball(t, []entry{
+		{name: "rv-ruby@4.0.5/4.0.5/", mode: 0o755},
+		{name: "rv-ruby@4.0.5/4.0.5/bin/", mode: 0o755},
+		{name: "rv-ruby@4.0.5/4.0.5/bin/ruby", body: "#!/bin/sh\n", mode: 0o755},
+	})
+}
+
 func TestInstallRejectsExisting(t *testing.T) {
 	rubies := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(rubies, "ruby-4.0.5"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := install("http://unused", "4.0.5", rubies, http.DefaultClient); err == nil {
+	if _, err := install("http://unused", "4.0.5", rubies, false, http.DefaultClient); err == nil {
 		t.Error("installing over an existing ruby should error")
+	}
+}
+
+func TestInstallForceReplacesExisting(t *testing.T) {
+	rubies := t.TempDir()
+	// A stale install with a marker file the reinstall must not preserve.
+	old := filepath.Join(rubies, "ruby-4.0.5")
+	if err := os.MkdirAll(old, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	stale := filepath.Join(old, "STALE")
+	if err := os.WriteFile(stale, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Write(rubyTarball(t))
+	}))
+	defer srv.Close()
+
+	if _, err := install(srv.URL, "4.0.5", rubies, true, srv.Client()); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := os.Stat(stale); !os.IsNotExist(err) {
+		t.Error("stale file survived a --force reinstall")
+	}
+	if _, err := os.Stat(filepath.Join(old, "bin", "ruby")); err != nil {
+		t.Errorf("fresh ruby not installed: %v", err)
 	}
 }

@@ -30,17 +30,21 @@ func URL(version string) string {
 
 // Install downloads the pre-built ruby and unpacks it to
 // <rubiesDir>/ruby-<version>, returning the install path.
-func Install(version, rubiesDir string, client *http.Client) (string, error) {
-	return install(URL(version), version, rubiesDir, client)
+func Install(version, rubiesDir string, force bool, client *http.Client) (string, error) {
+	return install(URL(version), version, rubiesDir, force, client)
 }
 
 // install is the network-injectable core: extract the tarball at url into
 // <rubiesDir>/ruby-<version>. The archive nests the ruby root two levels deep
-// (rv-ruby@<v>/<v>/…), so we strip those two leading path components.
-func install(url, version, rubiesDir string, client *http.Client) (string, error) {
+// (rv-ruby@<v>/<v>/…), so we strip those two leading path components. When force
+// is set an existing install is replaced, but only after the new copy has been
+// fully extracted, so a failed download never destroys the ruby already there.
+func install(url, version, rubiesDir string, force bool, client *http.Client) (string, error) {
 	dest := filepath.Join(rubiesDir, "ruby-"+version)
-	if _, err := os.Stat(dest); err == nil {
-		return "", fmt.Errorf("ruby %s already installed at %s", version, dest)
+	_, statErr := os.Stat(dest)
+	exists := statErr == nil
+	if exists && !force {
+		return "", fmt.Errorf("ruby %s already installed at %s (use --force to reinstall)", version, dest)
 	}
 	if err := os.MkdirAll(rubiesDir, 0o750); err != nil {
 		return "", err
@@ -63,6 +67,11 @@ func install(url, version, rubiesDir string, client *http.Client) (string, error
 
 	if err := extract(resp.Body, tmp, 2); err != nil {
 		return "", err
+	}
+	if exists {
+		if err := os.RemoveAll(dest); err != nil {
+			return "", err
+		}
 	}
 	if err := os.Rename(tmp, dest); err != nil {
 		return "", err
