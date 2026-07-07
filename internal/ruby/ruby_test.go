@@ -31,6 +31,15 @@ func TestParseName(t *testing.T) {
 	}
 }
 
+func TestRubiesDir(t *testing.T) {
+	if got := RubiesDir("", "/home/x"); got != "/home/x/.rubies" {
+		t.Errorf("default = %q, want /home/x/.rubies", got)
+	}
+	if got := RubiesDir("/custom/rubies", "/home/x"); got != "/custom/rubies" {
+		t.Errorf("override = %q, want /custom/rubies", got)
+	}
+}
+
 func TestMatch(t *testing.T) {
 	rubies := []Ruby{
 		{Root: "/r/ruby-3.4.5"}, {Root: "/r/ruby-4.0.2"}, {Root: "/r/ruby-4.0.5"},
