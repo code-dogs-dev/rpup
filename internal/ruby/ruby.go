@@ -83,16 +83,22 @@ func NewRuby(root string) (Ruby, bool) {
 	return Ruby{Root: root, Engine: engine, Version: version}, true
 }
 
-// SearchDirs returns chruby's ruby search roots, honouring $PREFIX and $HOME.
-func SearchDirs(prefix, home string) []string {
-	var dirs []string
-	if prefix != "" {
-		dirs = append(dirs, filepath.Join(prefix, "opt", "rubies"))
+const (
+	// EnvRubies names the environment variable that overrides where rubies are
+	// installed and searched; when unset, DefaultRubiesDir under $HOME is used.
+	EnvRubies = "RPUP_RUBIES"
+	// DefaultRubiesDir is the rubies directory relative to $HOME (chruby's default).
+	DefaultRubiesDir = ".rubies"
+)
+
+// RubiesDir resolves the single directory rubies are installed to and searched
+// in: $RPUP_RUBIES if set, else $HOME/.rubies. Install and use share it, so a
+// custom location is always both written to and discovered.
+func RubiesDir(rpupRubies, home string) string {
+	if rpupRubies != "" {
+		return rpupRubies
 	}
-	if home != "" {
-		dirs = append(dirs, filepath.Join(home, ".rubies"))
-	}
-	return dirs
+	return filepath.Join(home, DefaultRubiesDir)
 }
 
 // Discover lists rubies found under the given search dirs, sorted by name.

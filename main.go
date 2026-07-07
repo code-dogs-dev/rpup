@@ -5,10 +5,12 @@ package main
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"slices"
 	"strings"
 
+	"github.com/sebjacobs/rpup/internal/install"
 	"github.com/sebjacobs/rpup/internal/ruby"
 	"github.com/sebjacobs/rpup/internal/shell"
 )
@@ -34,6 +36,8 @@ func run(args []string, stdout, stderr *os.File) int {
 		return cmdList(stdout)
 	case "use":
 		return cmdUse(args[1:], stdout, stderr)
+	case "install":
+		return cmdInstall(args[1:], stdout, stderr)
 	case "reset":
 		fmt.Fprint(stdout, ruby.Render(ruby.EnvFromOS().Reset()))
 		return 0
@@ -47,8 +51,14 @@ func run(args []string, stdout, stderr *os.File) int {
 	}
 }
 
+// rubiesDir is the one place rpup resolves where rubies live, so install writes
+// to and list/use read from exactly the same directory.
+func rubiesDir() string {
+	return ruby.RubiesDir(os.Getenv(ruby.EnvRubies), os.Getenv("HOME"))
+}
+
 func searchDirs() []string {
-	return ruby.SearchDirs(os.Getenv("PREFIX"), os.Getenv("HOME"))
+	return []string{rubiesDir()}
 }
 
 func cmdList(stdout *os.File) int {
@@ -80,6 +90,34 @@ func cmdUse(args []string, stdout, stderr *os.File) int {
 		return 1
 	}
 	fmt.Fprint(stdout, ruby.Render(env.Use(match, opts)))
+	return 0
+}
+
+func cmdInstall(args []string, stdout, stderr *os.File) int {
+	var version string
+	var force bool
+	for _, a := range args {
+		switch a {
+		case "-f", "--force":
+			force = true
+		default:
+			if version == "" {
+				version = a
+			}
+		}
+	}
+	if version == "" {
+		fmt.Fprintf(stderr, "usage: rpup install [--force] <version>\n")
+		return 1
+	}
+	dir := rubiesDir()
+	fmt.Fprintf(stderr, "rpup: installing ruby %s into %s...\n", version, dir)
+	path, err := install.Install(version, dir, force, http.DefaultClient)
+	if err != nil {
+		fmt.Fprintf(stderr, "rpup: %v\n", err)
+		return 1
+	}
+	fmt.Fprintf(stdout, "installed ruby %s at %s\n", version, path)
 	return 0
 }
 
@@ -123,6 +161,8 @@ commands:
   list                 list installed rubies (* = active)
   use <ver> [opts...]  print shell to activate a ruby (eval me)
   use system           print shell to reset to system ruby
+  install [-f] <ver>   download a pre-built ruby into $RPUP_RUBIES (~/.rubies)
+                       (-f/--force reinstalls over an existing copy)
   reset                alias for 'use system'
   hook <zsh|bash>      print shell integration (eval me in your rc)
   doctor               check the active ruby actually landed on PATH
